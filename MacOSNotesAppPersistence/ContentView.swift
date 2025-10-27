@@ -49,6 +49,12 @@ struct ContentView: View {
                     Button("New Note", action: addNote)
                     Button("Save All", action: saveNotes)
                     Button("Reload", action: loadNotes)
+                    Button(action: saveNotesAs) {
+                        Label("Save As…", systemImage: "square.and.arrow.down.on.square")
+                    }
+                    Button(action: revealInFinder) {
+                        Label("Reveal", systemImage: "folder")
+                    }
                 }
                 
                 Text(fileMessage)
@@ -103,6 +109,39 @@ extension ContentView {
         } catch {
             fileMessage = "Save failed!"
             print("❌ Save error:", error.localizedDescription)
+        }
+    }
+    
+    func saveNotesAs() {
+        let panel = NSSavePanel()
+        panel.title = "Save Notes As"
+        panel.nameFieldStringValue = "notes.json"
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                let data = try JSONEncoder().encode(notes)
+                try data.write(to: url, options: [.atomic])
+                fileMessage = "Saved to \(url.lastPathComponent)"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    fileMessage = ""
+                }
+            } catch {
+                fileMessage = "Save failed! \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    func revealInFinder() {
+        let manager = FileManager.default
+        let notePath = fileURL.path
+        if manager.fileExists(atPath: notePath) {
+            NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+        } else {
+            let folderURL = fileURL.deletingLastPathComponent()
+            NSWorkspace.shared.open(folderURL)
         }
     }
     
